@@ -95,7 +95,7 @@ workflow SendMailUsingOffice365
     -UseSsl `
     -Port 587 `
     -SmtpServer 'smtp.office365.com' `
-    -From 'lberg@concurrency.com'  `
+    -From Get-AutomationVariable -Name 'Office365Email'  `
     -BodyAsHtml `
     -Credential $Cred
   
