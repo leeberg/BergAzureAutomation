@@ -62,7 +62,7 @@ workflow SendMailUsingOffice365
      $AzureOrgIdCredential = "BergEmailRights"
      #$Body = "This is an automated mail send from Azure Automation relaying mail using Office 365."
      $Subject = "Mail send from Azure Automation using Office 365"
-     #from='psd@ensence.com'
+	 $From = Get-AutomationVariable -Name 'Office365Email'
  
  ##############################################################################
  # Get the PowerShell Credentials from Azure Automation account assets
@@ -95,7 +95,7 @@ workflow SendMailUsingOffice365
     -UseSsl `
     -Port 587 `
     -SmtpServer 'smtp.office365.com' `
-    -From Get-AutomationVariable -Name 'Office365Email'  `
+    -From $From  `
     -BodyAsHtml `
     -Credential $Cred
   
