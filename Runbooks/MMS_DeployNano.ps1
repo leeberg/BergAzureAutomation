@@ -43,3 +43,4 @@ CreateNanoServer -VMName "Nano-04" -VHDFile "Nano-04.vhd" -VMMemory 512MB -VMDis
 Write-EventLog -EventId 2 -LogName System -Message "Runbook MMS_DeployNano Creating Server Nano-04" -Source OMSAutomation
 
 Write-Output "Done!" 
+Write-EventLog -EventId 3 -LogName System -Message "Runbook MMS_DeployNano Completed" -Source OMSAutomation
