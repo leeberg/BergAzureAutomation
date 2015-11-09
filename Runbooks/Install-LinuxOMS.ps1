@@ -1,71 +1,54 @@
 Param(
-  [string]$TargetServer,
-  [string]$InstallType
+  [string]$TargetServer
+
 )
 
 
-### TODO ###
-# Download OMS Config file 
-# Store on hybrid $TargetServer
-# Transfer to Linux Box
-# Restart Service
+New-EventLog -Logname System -Source OMSAutomation
+
+Write-EventLog -EventId 1 -LogName System -Message "Runbook Install Linux OS Started for $TargetServer" -Source OMSAutomation
+
+Write-EventLog -EventId 2 -LogName System -Message "Imporintg POSH-SSH Module for $TargetServer" -Source OMSAutomation
 
 #Import Module - Runbooks Folder on Hybrid Worker
 Import-Module 'C:\Runbooks\Posh-SSH\Posh-SSH.psd1' -Force
 
 #Get Various Cred / OMS Variables
+Write-EventLog -EventId 3 -LogName System -Message "Getting Various Cred / OMS Variables for $TargetServer" -Source OMSAutomation
+
 $cred = Get-AutomationPSCredential -Name 'BergLabLinuxAdmin'
 $TargetServerIP = $TargetServer
 $WorkspaceID = Get-AutomationVariable -Name 'OMSWorkspaceID'
 $PrimaryKey = Get-AutomationVariable -Name 'OMSPrimaryKey'
 
-Write-Output "Performing $InstallType install on $TargetServer"
+Write-Output "Performing install on $TargetServer"
 	
 #Initiate SSH Session
+Write-EventLog -EventId 4 -LogName System -Message "Initiating SSH Session for $TargetServer" -Source OMSAutomation
+
 $Out = New-SSHSession -ComputerName $TargetServerIP -Credential (Get-Credential $cred) -AcceptKey
 #Save Sesssion ID
 $Out = $Session = Get-SSHSession 
 
-### TODO ###
-# Download Latest and greatest OMS AGENT from the web???
-# Store on hybrid $TargetServer
+
 
 Write-Output "Starting Copy and Install"
-IF($InstallType -eq 'RPM')
-{
-	Write-Output "RPM INSTALLER"
-	Write-Output "Copy OMS RPM Installers from RUnbooks Directory"
-	$Out = Set-SCPFile -LocalFile 'C:\Runbooks\OMSInstall\rpm\omi-1.0.8-2.universalr.1.x64.rpm'  -RemotePath "/tmp/" -ComputerName $TargetServerIP -Credential (Get-Credential $cred) 
-	$Out = Set-SCPFile -LocalFile 'C:\Runbooks\OMSInstall\rpm\scx-cimprov-1.6.1-104.universal.x64.rpm' -RemotePath "/tmp/" -ComputerName $TargetServerIP -Credential (Get-Credential $cred) 
-	$Out = Set-SCPFile -LocalFile 'C:\Runbooks\OMSInstall\rpm\omsagent-1.0.0-11.universal.x64.rpm' -RemotePath "/tmp/" -ComputerName $TargetServerIP -Credential (Get-Credential $cred)
+Write-EventLog -EventId 5 -LogName System -Message "Starting Copy and Install for $TargetServer" -Source OMSAutomation
 	
-	WRITE-OUTPUT "RPM INSTALL"
-	$Out = Invoke-SSHCommand -Index $Session.SessionID -Command "sudo rpm -Uvh /tmp/omi-1.0.8-2.universalr.1.x64.rpm"
-	$Out = Invoke-SSHCommand -Index $Session.SessionID -Command "sudo rpm -Uvh /tmp/scx-cimprov-1.6.1-104.universal.x64.rpm"
-	$Out = Invoke-SSHCommand -Index $Session.SessionID -Command "sudo rpm -Uvh /tmp/omsagent-1.0.0-11.universal.x64.rpm" 
-}
-
-IF($InstallType -eq 'DEB')
-{
-	Write-Output "DEB INSTALLER"
-	Write-Output "Copy OMS DEB Installers from RUnbooks Directory"
-	$Out = Set-SCPFile -LocalFile 'C:\Runbooks\OMSInstall\deb\omi-1.0.8-2.universald.1.x64.deb'  -RemotePath "/tmp/" -ComputerName $TargetServerIP -Credential (Get-Credential $cred) 
-	$Out = Set-SCPFile -LocalFile 'C:\Runbooks\OMSInstall\deb\scx-cimprov-1.6.1-104.universal.x64.deb' -RemotePath "/tmp/" -ComputerName $TargetServerIP -Credential (Get-Credential $cred) 
-	$Out = Set-SCPFile -LocalFile 'C:\Runbooks\OMSInstall\deb\omsagent-1.0.0-11.universal.x64.deb' -RemotePath "/tmp/" -ComputerName $TargetServerIP -Credential (Get-Credential $cred)
+Write-Output "COPYING INSTALLER"
+Write-EventLog -EventId 6 -LogName System -Message "Copying OMS Universal Linux installer for $TargetServer" -Source OMSAutomation
+$Out = Set-SCPFile -LocalFile 'C:\Runbooks\OMSInstall\omsagent-1.0.0-47.universal.x64.sh'  -RemotePath "/tmp/" -ComputerName $TargetServerIP -Credential (Get-Credential $cred) 
 	
-	WRITE-OUTPUT "DEB INSTALL"
-	$Out = Invoke-SSHCommand -Index $Session.SessionID -Command "sudo dpkg –i  /tmp/omi-1.0.8-2.universald.1.x64.deb"
-	$Out = Invoke-SSHCommand -Index $Session.SessionID -Command "sudo dpkg –i  /tmp/scx-cimprov-1.6.1-104.universal.x64.deb"
-	$Out = Invoke-SSHCommand -Index $Session.SessionID -Command "sudo dpkg –i  /tmp/omsagent-1.0.0-11.universal.x64.deb" 
-}
+WRITE-OUTPUT "INSTALL"
+Write-EventLog -EventId 7 -LogName System -Message "Running OMS Universal Linux installer for $TargetServer" -Source OMSAutomation
+$Out = Invoke-SSHCommand -Index $Session.SessionID -Command "chmod +x /tmp/omsagent-1.0.0-47.universal.x64.sh"
+$Out = Invoke-SSHCommand -Index $Session.SessionID -Command "md5sum /tmp/omsagent-1.0.0-47.universal.x64.sh"
+$Out = Invoke-SSHCommand -Index $Session.SessionID -Command "Sudo /tmp/omsagent-1.0.0-47.universal.x64.sh --install -w 12b0fc66-f4bc-450b-8164-4976a1de27f5 -s 71+Ee1gIvboTVEgAF+52SlnZRIL8l8h9yoU25GeAuyb03KZB+ZgC7UPuhEhKoUd85j4Y23GT9Wz3uYAmJz74Xg=="
 
-
-WRITE-OUTPUT "Run OMS setup script"
-$Out = Invoke-SSHCommand -Index $Session.SessionID -Command "sudo /opt/microsoft/omsagent/bin/omsadmin.sh -w $WorkspaceID -s $PrimaryKey"
-
-#Restart Syslog Service
-$Out = Invoke-SSHCommand -Index $Session.SessionID -Command "sudo dpkg –i  /tmp/omsagent-1.0.0-11.universal.x64.deb" 
-
+WRITE-OUTPUT "Complete"
+Write-EventLog -EventId 8 -LogName System -Message "Completed OMS Universal Linux installer for $TargetServer" -Source OMSAutomation
 
 WRITE-OUTPUT "Close SSH Session"
 $OUT = Remove-SSHSession -Index $Session.SessionID
+Write-EventLog -EventId 9 -LogName System -Message "Closed Session - Runbooks Complete for $TargetServer" -Source OMSAutomation
+
